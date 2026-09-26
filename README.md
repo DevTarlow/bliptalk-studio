@@ -14,9 +14,9 @@ It runs entirely in your browser. The text you type is never uploaded anywhere.
 
 ## Play it now
 
-<!-- TODO: paste the itch.io link here once the page is live -->
+**[Play BlipTalk Studio on itch.io](https://tarlow.itch.io/bliptalk-studio)**
 
-Open BlipTalk Studio and start typing.
+Free, and it runs in your browser. Nothing to install.
 
 ---
 

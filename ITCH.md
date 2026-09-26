@@ -39,7 +39,7 @@ itch relabels things occasionally, so match on meaning rather than exact wording
 | Field | Value |
 | --- | --- |
 | **Title** | `BlipTalk Studio` |
-| **Project URL** | `bliptalk-studio` → `devtarlow.itch.io/bliptalk-studio` |
+| **Project URL** | `bliptalk-studio` → `tarlow.itch.io/bliptalk-studio` |
 | **Classification** | `Tools` |
 | **Release status** | `Released` |
 | **Pricing** | `$0 or donate` |
@@ -269,8 +269,7 @@ Three things to check on the live page, in order:
 3. **Audio unlocks on the first click.** The badge in the top right should
    change from *Click to enable audio* to *Audio ready*.
 
-Also worth doing once it is live: paste the published URL into the README,
-where there is a marked placeholder waiting for it.
+Published at <https://tarlow.itch.io/bliptalk-studio>. The README links to it.
 
 ---
 
