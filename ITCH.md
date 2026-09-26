@@ -126,15 +126,25 @@ GOOD TO KNOW
 - Made with the Web Audio API. No samples, no plugins, no server.
 ```
 
-### Short blurb
+### Short description
 
-For social previews, devlogs or anywhere that wants one line:
+The short description field takes **1 to 120 characters**. This one is 109:
 
 ```
-Type a line of dialogue, pick a retro voice, and export it as a WAV file for
-your game. Chiptune blips, Animalese chatter and robotic static, all generated
-in your browser.
+Turn typed text into retro dialogue blips and Animalese voices. Export them as WAV files for your game. Free.
 ```
+
+Alternates, if you want a different angle. All are within the limit:
+
+| Chars | Text |
+| --- | --- |
+| 108 | Turn typed text into retro dialogue blips and Animalese voices, then export them as WAV files for your game. |
+| 111 | Retro dialogue sound generator for games. Type a line, pick a voice, export a WAV. Free, right in your browser. |
+| 113 | Chiptune blips, Animalese voices and robot static for your game. Type a line, export a WAV. Free in your browser. |
+| 115 | Type a line, pick a retro voice, export a WAV for your game. Chiptune blips, Animalese chatter, robot static. Free. |
+
+Note that the same text is also a good fit for the `description` meta tag and
+for devlog headers, both of which truncate around this length.
 
 ---
 
