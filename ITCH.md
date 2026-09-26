@@ -271,3 +271,80 @@ Three things to check on the live page, in order:
 
 Also worth doing once it is live: paste the published URL into the README,
 where there is a marked placeholder waiting for it.
+
+---
+
+## 8. Launch devlog
+
+Post this from the project page (Dashboard, then **Devlogs**, then **New post**)
+so it stays linked to the project. Attach the cover or one of the screenshots.
+
+Title options, pick one:
+
+```
+BlipTalk Studio: free retro dialogue blips for your game
+BlipTalk Studio is out: retro dialogue sounds you can export as WAV
+Making retro dialogue sounds without recording a voice actor
+```
+
+Body:
+
+```
+BlipTalk Studio is up. It is a free browser tool that turns typed text into the
+short voice blips games play while dialogue types into the text box. Type a
+line, pick a voice, export a WAV.
+
+Recording a voice actor for "Welcome to my shop, adventurer!" is overkill, and
+digging through sound packs for the right bleep gets old. So this generates
+them instead.
+
+Three voices to pick from:
+
+- 8-Bit Chiptune. One short tone per character. NES and Game Boy.
+- Animalese. Fast chatter, one little syllable per letter. The Animal Crossing
+  sound.
+- Retro Noise / Robotic. Buzzy and crunchy, for computers, radios and villains.
+
+PUNCTUATION DOES MORE WORK THAN YOU WOULD EXPECT
+
+A question mark lifts the pitch 150 Hz, an exclamation mark 100 Hz, and full
+stops and commas drop it slightly. Each one gets a longer pause after it.
+Without that you get a string of identical beeps. With it, the line reads like
+a sentence. You can switch it off when you want flat delivery for menu blips.
+
+EXPORTS
+
+Export WAV File saves the whole line as a mono 16-bit WAV. It works in Unity,
+Godot, GameMaker, RPG Maker, or anything else that takes a WAV.
+
+Export Blip Pack saves five single-character blips, so you can trigger them one
+at a time from code as your text types out.
+
+Same line, same settings, same file every time. You can re-export after moving
+a slider without your game audio shifting underneath you. The sounds are yours,
+commercial projects included, no credit needed.
+
+It is not real text-to-speech. You will not get understandable words, and that
+is the point. These are the blips.
+
+No install, no account. Everything runs in your browser, and the text you type
+never gets uploaded anywhere.
+
+Give it a go and tell me what is missing. If there is a voice you want that is
+not here, say so in the comments.
+```
+
+Optional: if you want a line about why you built it, it fits after the second
+paragraph. Something specific beats something general ("I needed shopkeeper
+blips for a jam game and could not find a generator that did Animalese").
+
+### Why this shape
+
+- The title carries the tool name plus the terms people actually search:
+  retro, dialogue, blips, WAV.
+- Engine names in the body (Unity, Godot, GameMaker, RPG Maker) are how people
+  search for audio they can drop in.
+- "Not real text-to-speech" heads off the most likely wrong expectation while
+  still containing the phrase people type.
+- Concrete numbers (150 Hz, 100 Hz, five blips, 16-bit) do more for credibility
+  than adjectives, and they are all true of the build.
