@@ -347,3 +347,52 @@ blips for a jam game and could not find a generator that did Animalese").
   still containing the phrase people type.
 - Concrete numbers (150 Hz, 100 Hz, five blips, 16-bit) do more for credibility
   than adjectives, and they are all true of the build.
+
+---
+
+## 9. Release post for social
+
+Fits 280 characters with room spare. Counts shown are raw length, then what X
+charges once it shortens the link to 23 characters.
+
+Recommended, 192 characters (177 on X):
+
+```
+BlipTalk Studio is out. Type a line of dialogue, pick a chiptune, Animalese or robot voice, and export it as a WAV for your game. Free, in your browser.
+
+https://tarlow.itch.io/bliptalk-studio
+```
+
+Alternates:
+
+```
+Made a thing. BlipTalk Studio turns typed text into retro dialogue blips you can export as WAV. Chiptune, Animalese or robot voice. Free, no install.
+
+https://tarlow.itch.io/bliptalk-studio
+```
+189 characters (174 on X). The most casual of the set.
+
+```
+Need dialogue blips for your game but don't want to record anyone? Type a line, pick a voice, export a WAV. BlipTalk Studio is free and runs in your browser.
+
+https://tarlow.itch.io/bliptalk-studio
+```
+197 characters (182 on X). Leads with the problem, which tends to draw more replies.
+
+```
+BlipTalk Studio is out: a free browser tool that turns typed text into retro dialogue blips for your game. Chiptune, Animalese and robot voices, exported as WAV.
+
+https://tarlow.itch.io/bliptalk-studio
+
+#gamedev #chiptune
+```
+221 characters (206 on X). The hashtags help on Mastodon and Bluesky more than
+they do on X.
+
+### Image
+
+Attach **`itch-assets/social-card-1200x630.png`** to the post. That is the
+standard card size, so it will not be cropped by X, Facebook, LinkedIn or
+Discord. Posts with an image get considerably more reach than text alone, and
+the card already carries the name, the three voices and the export line, so
+the post text does not have to repeat all of it.
