@@ -24,6 +24,11 @@ Artwork is in `itch-assets/`:
 | `screenshot-1-interface.png` | 1800 × 1668 | Screenshot 1 |
 | `screenshot-2-playback.png` | 1800 × 1668 | Screenshot 2 |
 | `screenshot-3-animalese.png` | 1800 × 1668 | Screenshot 3 |
+| `banner-1920x312.png` | 1920 × 312 | Page banner (section 6) |
+| `bg-grid-tile-34px.png` | 34 × 34 | Page background tile (section 6) |
+| `bg-grid-tile-34px@2x.png` | 68 × 68 | Page background tile, 2x |
+| `bg-grid-tile-strong-34px.png` | 34 × 34 | Page background tile, stronger lines |
+| `bg-page-1920x1200.png` | 1920 × 1200 | Page background, full page |
 
 ---
 
@@ -177,7 +182,77 @@ not by a generative model, so nothing in the output is AI-generated.
 
 ---
 
-## 6. After publishing
+## 6. Theming the page to match the app
+
+You do **not** need custom CSS for this. itch's built-in theme editor already
+handles background images, a banner and colours. (Custom CSS exists, but it has
+to be requested from itch support per account, and they ask you to show it
+cannot be done with the theme editor first.)
+
+Open the project page and click **Edit Theme** at the top.
+
+### Colours
+
+Taken from `src/index.css`, so the page and the app agree exactly.
+
+| itch field | Value | What it is in the app |
+| --- | --- | --- |
+| **BG** | `#04070d` | the page background |
+| **BG2** | `#0f172a` | the panel colour |
+| **BG2 Alpha** | `0.90` | lets the grid show faintly through the content column |
+| **Text** | `#cbd5e1` | body text |
+| **Link** | `#34d399` | the emerald accent |
+| **Buttons** | `#34d399` | the Play button |
+| **Headers** | `#34d399` | section titles |
+
+**Set BG2 Alpha to around 0.9.** At 1.0 the content column is fully opaque and
+you will only see the grid in the page margins. Between 0.85 and 0.95 is what
+the app's own panels look like.
+
+### Background
+
+Upload **`bg-grid-tile-34px.png`** as the background image and set it to
+repeat.
+
+It is a 34 x 34 transparent tile, exactly one grid cell, so repeating it
+reproduces the app's grid pitch precisely. The transparency is deliberate: the
+BG colour shows through, so the grid follows if you change the background
+colour later.
+
+| File | When to use it |
+| --- | --- |
+| `bg-grid-tile-34px.png` | Default. Correct pitch when repeated at natural size. |
+| `bg-grid-tile-34px@2x.png` | If the theme editor lets you set a background size, use this at `34px` for sharper lines on high-density screens. |
+| `bg-grid-tile-strong-34px.png` | Same tile with the lines at 10% instead of 5%, if the default reads as flat. |
+| `bg-page-1920x1200.png` | A full-page version with the emerald glow from the top of the app baked in. Only use it if there is no repeat option, and note it will not cover a very long page. |
+
+### Banner
+
+Upload **`banner-1920x312.png`** as the header image. Its background is
+transparent, so the grid runs behind it and it reads as part of the page rather
+than a pasted-on block.
+
+Worth knowing: a banner **replaces the page title**, so the project name is no
+longer printed above the description. The name still appears in the page
+metadata and in listings. Skip the banner if you would rather keep the text
+title.
+
+### Font
+
+The app uses a monospace stack. Closest matches available in itch's font
+dropdowns:
+
+| Field | Suggestion |
+| --- | --- |
+| Body text | **Space Mono** |
+| Headers | **Space Mono**, or **VT323** for a stronger pixel-terminal look |
+
+Avoid Press Start 2P for body text. It is a faithful 8-bit face, but it is
+hard to read in paragraphs.
+
+---
+
+## 7. After publishing
 
 Three things to check on the live page, in order:
 
