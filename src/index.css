@@ -1,0 +1,436 @@
+@import 'tailwindcss';
+
+/* ---------------------------------------------------------------------------
+   BlipTalk Studio — retro terminal / arcade theme.
+   Everything is hand-rolled CSS on top of Tailwind: no web fonts, no external
+   assets, so the itch.io iframe renders identically offline.
+--------------------------------------------------------------------------- */
+
+@theme {
+  --font-mono: ui-monospace, 'SFMono-Regular', 'SF Mono', Menlo, Consolas,
+    'Liberation Mono', 'Courier New', monospace;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  color: #cbd5e1;
+  font-family: var(--font-mono);
+  background-color: #04070d;
+  /* Subtle CRT grid + top glow. Cheap: two repeating gradients, no images. */
+  background-image:
+    radial-gradient(circle at 50% -10%, rgba(16, 185, 129, 0.13), transparent 55%),
+    repeating-linear-gradient(0deg, rgba(148, 163, 184, 0.05) 0 1px, transparent 1px 34px),
+    repeating-linear-gradient(90deg, rgba(148, 163, 184, 0.05) 0 1px, transparent 1px 34px);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: #34d399;
+  color: #04070d;
+}
+
+/* ---- Panels: hard 2px borders + offset shadow = chunky pixel chrome ------- */
+
+.panel {
+  position: relative;
+  border: 2px solid #1e293b;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(4, 7, 13, 0.95));
+  box-shadow:
+    0 0 0 1px #000,
+    4px 4px 0 0 rgba(0, 0, 0, 0.75);
+}
+
+.panel-accent-emerald {
+  border-color: #065f46;
+}
+.panel-accent-cyan {
+  border-color: #155e75;
+}
+.panel-accent-amber {
+  border-color: #78350f;
+}
+
+/* Corner studs — the "pixel" tell. */
+.studs::before,
+.studs::after {
+  content: '';
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: #334155;
+  pointer-events: none;
+}
+.studs::before {
+  top: -2px;
+  left: -2px;
+}
+.studs::after {
+  bottom: -2px;
+  right: -2px;
+}
+
+/* ---- Labels -------------------------------------------------------------- */
+
+.panel-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.panel-label::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  flex: none;
+}
+
+.crt-glow {
+  text-shadow: 0 0 8px rgba(52, 211, 153, 0.55);
+}
+
+/* ---- Scanline overlay inside the dialogue screen ------------------------- */
+
+.scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.035) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+/* ---- Blinking block cursor ---------------------------------------------- */
+
+@keyframes blip-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.blink {
+  animation: blip-blink 1s steps(1, end) infinite;
+}
+
+@keyframes blip-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.pulse-soft {
+  animation: blip-pulse 1.6s ease-in-out infinite;
+}
+
+/* Current-character highlight in the typewriter box. */
+.char-active {
+  background: #34d399;
+  color: #04070d;
+  box-shadow: 0 0 12px rgba(52, 211, 153, 0.7);
+}
+
+/* Un-revealed characters keep their layout box so nothing reflows mid-line. */
+.char-pending {
+  opacity: 0;
+}
+
+/* ---- Range sliders ------------------------------------------------------- */
+
+input[type='range'].retro-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 18px;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type='range'].retro-range::-webkit-slider-runnable-track {
+  height: 6px;
+  background: #0f172a;
+  border: 1px solid #334155;
+}
+
+input[type='range'].retro-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 18px;
+  margin-top: -7px;
+  background: #34d399;
+  border: 1px solid #04070d;
+  box-shadow: 0 0 0 1px #065f46;
+}
+
+input[type='range'].retro-range:hover::-webkit-slider-thumb,
+input[type='range'].retro-range:focus-visible::-webkit-slider-thumb {
+  background: #6ee7b7;
+}
+
+input[type='range'].retro-range::-moz-range-track {
+  height: 6px;
+  background: #0f172a;
+  border: 1px solid #334155;
+}
+
+input[type='range'].retro-range::-moz-range-thumb {
+  width: 10px;
+  height: 16px;
+  border-radius: 0;
+  background: #34d399;
+  border: 1px solid #04070d;
+  box-shadow: 0 0 0 1px #065f46;
+}
+
+input[type='range'].retro-range:focus-visible {
+  outline: 1px solid #34d399;
+  outline-offset: 2px;
+}
+
+/* ---- Textarea ------------------------------------------------------------ */
+
+.retro-textarea {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+}
+
+.retro-textarea::-webkit-scrollbar {
+  width: 8px;
+}
+
+.retro-textarea::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+.retro-textarea::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
+.retro-textarea::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* ---- Buttons ------------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border: 2px solid;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition:
+    transform 80ms steps(2, end),
+    background-color 120ms linear,
+    color 120ms linear;
+  white-space: nowrap;
+}
+
+.btn:active:not(:disabled) {
+  transform: translate(2px, 2px);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn:focus-visible {
+  outline: 2px solid #e2e8f0;
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  border-color: #34d399;
+  background: #34d399;
+  color: #04070d;
+  box-shadow: 3px 3px 0 0 #065f46;
+}
+.btn-primary:hover:not(:disabled) {
+  background: #6ee7b7;
+}
+
+.btn-ghost {
+  border-color: #334155;
+  background: #0b1220;
+  color: #cbd5e1;
+  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 0.7);
+}
+.btn-ghost:hover:not(:disabled) {
+  border-color: #475569;
+  background: #131c2e;
+  color: #f1f5f9;
+}
+
+.btn-cyan {
+  border-color: #22d3ee;
+  background: #0b1220;
+  color: #67e8f9;
+  box-shadow: 3px 3px 0 0 #164e63;
+}
+.btn-cyan:hover:not(:disabled) {
+  background: #22d3ee;
+  color: #04070d;
+}
+
+.btn-amber {
+  border-color: #fbbf24;
+  background: #0b1220;
+  color: #fcd34d;
+  box-shadow: 3px 3px 0 0 #78350f;
+}
+.btn-amber:hover:not(:disabled) {
+  background: #fbbf24;
+  color: #04070d;
+}
+
+.btn-stop {
+  border-color: #f87171;
+  background: #0b1220;
+  color: #fca5a5;
+  box-shadow: 3px 3px 0 0 #7f1d1d;
+}
+.btn-stop:hover:not(:disabled) {
+  background: #f87171;
+  color: #04070d;
+}
+
+/* Segmented mode tabs */
+.mode-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 2px solid #1e293b;
+  background: #0b1220;
+  color: #94a3b8;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.mode-tab:hover {
+  color: #e2e8f0;
+  border-color: #334155;
+}
+
+.mode-tab[data-active='true'] {
+  border-color: #34d399;
+  background: rgba(52, 211, 153, 0.14);
+  color: #6ee7b7;
+  box-shadow: inset 0 -3px 0 0 #34d399;
+}
+
+.chip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 2px solid #1e293b;
+  background: #0b1220;
+  color: #94a3b8;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.chip-btn:hover {
+  color: #fcd34d;
+  border-color: #78350f;
+}
+
+.chip-btn[data-active='true'] {
+  border-color: #fbbf24;
+  background: rgba(251, 191, 36, 0.14);
+  color: #fcd34d;
+  box-shadow: inset 0 -3px 0 0 #fbbf24;
+}
+
+/* Waveform segmented control */
+.wave-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  border: 2px solid #1e293b;
+  background: #0b1220;
+  color: #64748b;
+  padding: 0.25rem 0.2rem;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.wave-btn:hover {
+  color: #67e8f9;
+  border-color: #155e75;
+}
+
+.wave-btn[data-active='true'] {
+  border-color: #22d3ee;
+  background: rgba(34, 211, 238, 0.13);
+  color: #67e8f9;
+  box-shadow: inset 0 -3px 0 0 #22d3ee;
+}
+
+.wave-btn span {
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Pixel checkbox */
+.pixel-check {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border: 2px solid #475569;
+  background: #0b1220;
+  display: grid;
+  place-items: center;
+  color: transparent;
+}
+
+.pixel-check[data-on='true'] {
+  border-color: #34d399;
+  background: #34d399;
+  color: #04070d;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blink,
+  .pulse-soft {
+    animation: none;
+  }
+}
