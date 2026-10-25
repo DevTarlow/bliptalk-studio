@@ -183,4 +183,4 @@ Yes. The tool is free and the sounds you make with it are yours.
 
 ## License
 
-MIT.
+MIT. See [LICENSE](LICENSE) for the full text.
