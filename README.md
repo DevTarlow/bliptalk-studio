@@ -53,6 +53,11 @@ They are the short voice blips games play while dialogue types onto the screen.
 You can ignore all of these and still get a usable sound. Here is what each one
 does.
 
+Every slider also has a number box beside it. Type a value and press **Enter**
+(or click away) to jump straight to it. Typed values snap to the slider's step
+and clamp to its range, so `123` on Base Pitch becomes 125 Hz and `9999`
+becomes 1200 Hz. Invalid text simply reverts to the previous value.
+
 | Control | What it does | Try this |
 | --- | --- | --- |
 | **Base Pitch** | How high or low the voice sits. In Animalese it changes the voice completely, from a growly bear to a squeaky fairy. | 120–250 Hz for big monsters, 500–700 Hz for heroes, 900 Hz and up for tiny creatures. |
@@ -75,9 +80,9 @@ Two of these only apply to certain voices:
 
 ## Presets
 
-Each preset sets every slider at once and switches to the matching voice. Once
-you move a slider the bar reads *custom patch*, so a preset will not overwrite
-your edits.
+Five built-in presets ship with the app. Each one sets every slider at once and
+switches to the matching voice. They are read-only: once you change any control
+the bar reads *custom patch*, and the built-in itself stays unchanged.
 
 | Preset | Voice | Character |
 | --- | --- | --- |
@@ -86,6 +91,35 @@ your edits.
 | **8-Bit Hero** | Chiptune | Bright, fast, crisp. The classic RPG protagonist. |
 | **Dark Wizard** | Chiptune | Very low and slow, with harsh, long-ringing notes. |
 | **Fairy Whispers** | Animalese | Very high, very fast, soft. Small and magical. |
+
+### Your own presets
+
+Open **Save current**, type a name, and choose **Save as new**. Your preset
+appears under **Yours** in the Presets bar. Load it, tweak it, and choose
+**Update “…”** to save the changes, or rename it in the same box. The trash
+button deletes it. You can keep up to 40 of your own presets.
+
+If a built-in preset is loaded, **Save current** saves a new copy of it — the
+built-in itself cannot be edited or deleted.
+
+Your presets are stored in this browser only (localStorage). They stay on this
+device and browser, are never uploaded, and disappear if you clear the site's
+data. Built-in preset names are reserved, so pick a name that is not already in
+the bar. Use **Backup** if you want to move them somewhere else.
+
+### Backing up your presets
+
+Open **Backup** in the Presets bar and choose **Export JSON**. The file holds
+your own presets only; the five built-ins always ship with the app. To restore,
+choose **Backup → Import JSON**. Import adds presets to what is already there
+and skips names already in use, so nothing is overwritten. The file stays on
+your computer, the same as everything else here.
+
+### Your last line
+
+The voice settings you last used are remembered in this browser. The current
+line is kept for the tab, so a refresh does not lose it. Closing the tab clears
+the line. Neither is uploaded anywhere.
 
 ---
 
@@ -101,7 +135,7 @@ The file includes the pauses that punctuation creates, so it lines up with the
 text typing on screen. For a tighter file, turn **Punctuation Intonation** off
 and export again.
 
-The same line with the same settings always produces the same file, so you can
+The same line with the same settings always sounds the same, so you can
 re-export without the sound changing underneath you.
 
 ### Export Blip Pack
@@ -116,6 +150,10 @@ code as text types out. Which five you get depends on the voice:
 
 Your browser will probably ask permission to download multiple files the first
 time. Allow it and all five will arrive.
+
+If you would rather not deal with the permission prompt, click **ZIP** beside
+**Export Blip Pack**. It downloads `bliptalk-blip-pack.zip`, a single archive
+containing the same five WAVs.
 
 ### Using the sounds in your game
 
@@ -144,8 +182,11 @@ Load a preset, then change the slider listed.
 
 | Key | Action |
 | --- | --- |
-| `Space` | Play or stop the line. Ignored while you are typing in the text box. |
-| `Esc` | Stop. |
+| `Space` | Play or stop the line. Ignored while you are typing in the text box or when another button has keyboard focus. |
+| `Esc` | Stop. While editing a number box or a preset name, cancels the edit instead. |
+
+The main Play button reads **Restart** while a line is playing and starts the
+line again from the beginning. `Space` still toggles play and stop.
 
 ---
 
@@ -158,7 +199,8 @@ from *Click to enable audio* to *Audio ready* when it works.
 
 **Only one file downloaded from the blip pack.**
 Your browser asks permission before allowing multiple downloads. Allow it, then
-click Export Blip Pack again.
+click Export Blip Pack again. Or click **ZIP** to download the same five WAVs
+as one archive.
 
 **The exported file sounds wrong or too quiet.**
 Check the Volume slider first, since it applies to exports as well as playback.
@@ -171,6 +213,25 @@ export faster.
 **Is my text uploaded anywhere?**
 No. Everything is generated inside your browser, and the app works offline once
 the page has loaded.
+
+**Is my last line saved?**
+The current line is kept in this tab's session storage, so a refresh does not
+lose it. Closing the tab clears it. Your voice settings are kept in this
+browser. Neither is uploaded.
+
+**Where are my saved presets?**
+In this browser's local storage. They are not tied to an account and do not
+travel between browsers or devices unless you use **Backup**.
+
+**Can I move my presets to another browser?**
+Yes. Open **Backup → Export JSON** in the Presets bar, then use **Backup →
+Import JSON** in the other browser. Import merges with what is already there
+and skips names already in use.
+
+**Can I edit the built-in presets?**
+No. The five stock presets are fixed. Load one, tune it, then use **Save
+current → Save as new** to keep your own version. From then on you can update
+or delete your copy under **Yours**.
 
 **Which browsers work?**
 Chrome, Edge, Firefox and Safari. Anything from the last few years should work.

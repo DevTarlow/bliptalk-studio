@@ -17,6 +17,16 @@ const WAVE_NOTES = {
   robotic: 'carrier shape',
 };
 
+/** Envelope Decay is not used by Animalese; be explicit instead of silent. */
+const DECAY_HINT = {
+  animalese: 'Not used in Animalese — length follows Speed',
+};
+
+/** Formant/Crush does nothing in Chiptune; the value still carries to other modes. */
+const CHARACTER_HINT = {
+  chiptune: 'Not used in Chiptune',
+};
+
 export default function ControlsPanel({ config, mode, onChange }) {
   const lettersPerSecond = (1000 / config.speed).toFixed(0);
 
@@ -76,7 +86,7 @@ export default function ControlsPanel({ config, mode, onChange }) {
           max={900}
           step={5}
           unit=" ms"
-          hint="Note length (staccato → smooth)"
+          hint={DECAY_HINT[mode] ?? 'Note length (staccato → smooth)'}
           onChange={(value) => onChange({ decay: value })}
         />
         <Slider
@@ -86,7 +96,7 @@ export default function ControlsPanel({ config, mode, onChange }) {
           max={2.4}
           step={0.05}
           format={(value) => value.toFixed(2)}
-          hint="Vowel colour · quantiser grit"
+          hint={CHARACTER_HINT[mode] ?? 'Vowel colour · quantiser grit'}
           onChange={(value) => onChange({ voiceCharacter: value })}
         />
       </div>

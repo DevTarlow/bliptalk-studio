@@ -3,6 +3,7 @@
 import {
   CircleAlert,
   Download,
+  FileArchive,
   Info,
   LoaderCircle,
   Package,
@@ -35,6 +36,7 @@ export default function ActionBar({
   onStop,
   onExportWav,
   onExportPack,
+  onExportZip,
 }) {
   const rendering = busy !== null;
 
@@ -47,7 +49,11 @@ export default function ActionBar({
           onClick={onPlay}
           disabled={!canSpeak || rendering}
           title={
-            !canSpeak ? 'Type a line first' : 'Play the dialogue (Spacebar)'
+            !canSpeak
+              ? 'Type a line first'
+              : isPlaying
+                ? 'Restart the dialogue from the beginning'
+                : 'Play the dialogue (Spacebar)'
           }
         >
           {isPlaying ? <RotateCcw size={13} strokeWidth={2.5} /> : <Play size={13} strokeWidth={2.5} />}
@@ -97,11 +103,32 @@ export default function ActionBar({
           )}
           {busy === 'pack' ? 'Rendering…' : 'Export Blip Pack'}
         </button>
+
+        <button
+          type="button"
+          className="btn btn-ghost"
+          onClick={onExportZip}
+          disabled={rendering}
+          aria-label="Download blip pack as a single ZIP archive"
+          title="Download the same 5 blips as one ZIP file"
+        >
+          {busy === 'zip' ? (
+            <LoaderCircle size={13} strokeWidth={2.5} className="animate-spin" />
+          ) : (
+            <FileArchive size={13} strokeWidth={2.5} />
+          )}
+          {busy === 'zip' ? 'Rendering…' : 'ZIP'}
+        </button>
       </div>
 
       <div className="mt-2 flex items-start gap-2 border-t-2 border-slate-800 pt-2">
         <StatusIcon tone={status.tone} />
-        <p className={`text-[10px] leading-relaxed ${TONE_STYLES[status.tone] ?? TONE_STYLES.info}`}>
+        <p
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          className={`text-[10px] leading-relaxed ${TONE_STYLES[status.tone] ?? TONE_STYLES.info}`}
+        >
           {status.text}
         </p>
       </div>

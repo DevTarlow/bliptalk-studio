@@ -10,6 +10,7 @@
  */
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   analyzeText,
   DEFAULT_CONFIG,
@@ -22,7 +23,54 @@ import {
 import { encodeWavBytes, formatBytes, peakAmplitude } from '../src/audio/wav.js';
 import { createVowelBuffer, createNoiseBuffer, VOWEL_KEYS } from '../src/audio/formants.js';
 import { makeBitcrushCurve, makeSoftClipCurve } from '../src/audio/SynthEngine.js';
-import { NOTE_BLIP_PACK, PRESETS, presetConfig } from '../src/audio/presets.js';
+import {
+  configFromPreset,
+  findPreset,
+  MAX_TEXT_LENGTH,
+  NOTE_BLIP_PACK,
+  PRESETS,
+  presetConfig,
+} from '../src/audio/presets.js';
+import {
+  MAX_PRESET_NAME_LENGTH,
+  MAX_USER_PRESETS,
+  PRESET_STORE_KEY,
+  addUserPreset,
+  createUserPreset,
+  deleteUserPreset,
+  emptyPresetStore,
+  isPresetNameTaken,
+  loadPresetStore,
+  persistPresetStore,
+  resolvePresets,
+  sanitizePresetName,
+  sanitizePresetStore,
+  updateUserPreset,
+} from '../src/audio/presetStore.js';
+import {
+  MAX_IMPORT_BYTES,
+  createPresetBundle,
+  mergePresetBundle,
+  parsePresetBundle,
+  presetBundleFilename,
+  serializePresetBundle,
+} from '../src/audio/presetTransfer.js';
+import {
+  DRAFT_STORE_KEY,
+  WORKSPACE_STORE_KEY,
+  configsEqual,
+  defaultWorkspaceState,
+  hydrateWorkspace,
+  loadWorkspace,
+  persistWorkspace,
+} from '../src/audio/workspaceStore.js';
+import { crc32, createZipBytes } from '../src/utils/zip.js';
+import { APP_VERSION } from '../src/version.js';
+import { parseNumericInput } from '../src/utils/numericInput.js';
+
+const PACKAGE_VERSION = JSON.parse(
+  readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+).version;
 
 let passed = 0;
 const failures = [];
@@ -57,6 +105,60 @@ function stubContext(sampleRate = 44100) {
       };
     },
   };
+}
+
+/** localStorage stand-in for preset-store tests. */
+function memoryStorage(initial = {}) {
+  const data = new Map(Object.entries(initial));
+  return {
+    getItem(key) {
+      return data.has(key) ? data.get(key) : null;
+    },
+    setItem(key, value) {
+      data.set(key, value);
+    },
+  };
+}
+
+function throwingStorage() {
+  return {
+    getItem() {
+      throw new Error('storage blocked');
+    },
+    setItem() {
+      throw new Error('storage blocked');
+    },
+  };
+}
+
+/** Read back a store-only ZIP, enough to prove the writer's layout. */
+function zipEntries(bytes) {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const eocd = bytes.length - 22;
+  assert.equal(view.getUint32(eocd, true), 0x06054b50, 'end record signature');
+  const count = view.getUint16(eocd + 10, true);
+  const centralOffset = view.getUint32(eocd + 16, true);
+  const entries = [];
+  let offset = centralOffset;
+
+  for (let i = 0; i < count; i += 1) {
+    assert.equal(view.getUint32(offset, true), 0x02014b50, 'central header signature');
+    const method = view.getUint16(offset + 10, true);
+    const crc = view.getUint32(offset + 16, true);
+    const size = view.getUint32(offset + 24, true);
+    const nameLength = view.getUint16(offset + 28, true);
+    const extraLength = view.getUint16(offset + 30, true);
+    const commentLength = view.getUint16(offset + 32, true);
+    const localOffset = view.getUint32(offset + 42, true);
+    const name = new TextDecoder().decode(bytes.slice(offset + 46, offset + 46 + nameLength));
+    const localNameLength = view.getUint16(localOffset + 26, true);
+    const localExtraLength = view.getUint16(localOffset + 28, true);
+    const dataStart = localOffset + 30 + localNameLength + localExtraLength;
+    entries.push({ name, method, crc, data: bytes.slice(dataStart, dataStart + size) });
+    offset += 46 + nameLength + extraLength + commentLength;
+  }
+
+  return entries;
 }
 
 // ---------------------------------------------------------------------------
@@ -331,6 +433,517 @@ test('the pentatonic blip pack spans a musical interval set', () => {
   const semis = NOTE_BLIP_PACK.map((b) => b.semitones);
   assert.deepEqual(semis, [...semis].sort((a, b) => a - b), 'ordered');
   assert.equal(new Set(semis).size, 5, 'all distinct');
+});
+
+// ---------------------------------------------------------------------------
+section('Numeric input');
+
+test('accepts in-range numbers and trims whitespace', () => {
+  assert.equal(parseNumericInput('440', { min: 100, max: 1200, step: 5 }), 440);
+  assert.equal(parseNumericInput('  45 ', { min: 10, max: 150, step: 1 }), 45);
+  assert.equal(parseNumericInput('+12', { min: 0, max: 100, step: 1 }), 12);
+  assert.equal(parseNumericInput('12.', { min: 0, max: 100, step: 1 }), 12);
+});
+
+test('rejects empty, junk and non-decimal notation', () => {
+  for (const raw of ['', '   ', 'abc', '12abc', '1e3', 'Infinity', 'NaN', '1,5', '-', '.']) {
+    assert.equal(parseNumericInput(raw, { min: 0, max: 100, step: 1 }), null, raw);
+  }
+});
+
+test('clamps to the slider range', () => {
+  assert.equal(parseNumericInput('9999', { min: 100, max: 1200, step: 5 }), 1200);
+  assert.equal(parseNumericInput('-5', { min: 100, max: 1200, step: 5 }), 100);
+  assert.equal(parseNumericInput('0', { min: 10, max: 150, step: 1 }), 10);
+});
+
+test('snaps typed values to the slider step', () => {
+  assert.equal(parseNumericInput('123', { min: 100, max: 1200, step: 5 }), 125);
+  assert.equal(parseNumericInput('122', { min: 100, max: 1200, step: 5 }), 120);
+  assert.equal(parseNumericInput('0.73', { min: 0.4, max: 2.4, step: 0.05 }), 0.75);
+  assert.equal(parseNumericInput('1.2', { min: 0.4, max: 2.4, step: 0.05 }), 1.2);
+});
+
+test('volume percent clamps at both rails', () => {
+  assert.equal(parseNumericInput('80', { min: 0, max: 100, step: 1 }), 80);
+  assert.equal(parseNumericInput('120', { min: 0, max: 100, step: 1 }), 100);
+  assert.equal(parseNumericInput('-20', { min: 0, max: 100, step: 1 }), 0);
+});
+
+// ---------------------------------------------------------------------------
+section('Preset store');
+
+test('createUserPreset normalises and separates mode from patch', () => {
+  const preset = createUserPreset({
+    id: 'user-test-hero',
+    name: '  My   Hero  ',
+    config: {
+      mode: 'robotic',
+      basePitch: 99999,
+      speed: 78,
+      jitter: 55,
+      decay: 150,
+      volume: 0.7,
+      waveform: 'square',
+      punctuation: true,
+      voiceCharacter: 0.8,
+    },
+  });
+  assert.equal(preset.id, 'user-test-hero');
+  assert.equal(preset.name, 'My Hero');
+  assert.equal(preset.mode, 'robotic');
+  assert.equal(preset.patch.basePitch, 1200);
+  assert.equal(preset.patch.speed, 78);
+  assert.equal(preset.patch.waveform, 'square');
+  assert.equal('mode' in preset.patch, false);
+});
+
+test('resolvePresets keeps built-ins fixed and appends user presets', () => {
+  let store = emptyPresetStore();
+  store = addUserPreset(store, {
+    id: 'user-test-mine',
+    name: 'Mine',
+    config: { ...DEFAULT_CONFIG, basePitch: 500 },
+  });
+
+  const presets = resolvePresets(store);
+  assert.equal(presets.length, PRESETS.length + 1);
+  assert.deepEqual(
+    presets.slice(0, PRESETS.length).map((preset) => preset.id),
+    PRESETS.map((preset) => preset.id),
+  );
+  assert.equal(findPreset('8bit-hero', presets).name, '8-Bit Hero');
+  assert.equal(presets[presets.length - 1].name, 'Mine');
+});
+
+test('user preset transforms add, update and delete in order', () => {
+  let store = emptyPresetStore();
+  store = addUserPreset(store, { id: 'user-test-a', name: 'First', config: DEFAULT_CONFIG });
+  store = addUserPreset(store, {
+    id: 'user-test-b',
+    name: 'Second',
+    config: { ...DEFAULT_CONFIG, mode: 'animalese', basePitch: 520 },
+  });
+  assert.deepEqual(store.userPresets.map((preset) => preset.name), ['First', 'Second']);
+
+  store = updateUserPreset(store, 'user-test-a', {
+    name: 'First Edited',
+    config: { ...DEFAULT_CONFIG, basePitch: 500 },
+  });
+  assert.equal(store.userPresets[0].name, 'First Edited');
+  assert.equal(store.userPresets[0].patch.basePitch, 500);
+
+  store = deleteUserPreset(store, 'user-test-a');
+  assert.deepEqual(store.userPresets.map((preset) => preset.id), ['user-test-b']);
+});
+
+test('built-in presets cannot be deleted or altered', () => {
+  let store = emptyPresetStore();
+  store = addUserPreset(store, { id: 'user-test-keep', name: 'Keep', config: DEFAULT_CONFIG });
+  store = deleteUserPreset(store, '8bit-hero');
+
+  assert.deepEqual(store.userPresets.map((preset) => preset.name), ['Keep']);
+  const presets = resolvePresets(store);
+  assert.equal(presets.length, PRESETS.length + 1);
+  assert.equal(findPreset('8bit-hero', presets).name, '8-Bit Hero');
+  assert.equal(findPreset('8bit-hero', presets).patch.basePitch, 620);
+});
+
+test('preset names are unique case-insensitively and stock names are reserved', () => {
+  let store = emptyPresetStore();
+  store = addUserPreset(store, {
+    id: 'user-test-name',
+    name: 'My Hero',
+    config: DEFAULT_CONFIG,
+  });
+  assert.equal(isPresetNameTaken('my hero', store), true);
+  assert.equal(isPresetNameTaken(' MY HERO ', store), true);
+  assert.equal(isPresetNameTaken('my hero', store, 'user-test-name'), false);
+  assert.equal(isPresetNameTaken('8-bit hero', store), true, 'stock names stay reserved');
+  assert.equal(
+    isPresetNameTaken('8-bit hero', store, 'user-test-name'),
+    true,
+    'excluding a user preset does not free a stock name',
+  );
+  assert.equal(isPresetNameTaken('Something Else', store), false);
+});
+
+test('sanitizePresetStore repairs user data and ignores legacy built-in keys', () => {
+  const store = sanitizePresetStore({
+    userPresets: [
+      { id: 'bad id', name: '  Good  Name ', mode: 'robotic', patch: { basePitch: 99999 } },
+      { id: 'bad id', name: 'good name', mode: 'kazoo', patch: {} },
+      { id: 'user-ok', name: '8-Bit Hero', mode: 'chiptune', patch: {} },
+      'nope',
+    ],
+    builtInOverrides: {
+      '8bit-hero': { name: 'Hacked', mode: 'kazoo', patch: { speed: 9999 } },
+    },
+    deletedBuiltIns: ['dark-wizard'],
+  });
+
+  assert.equal(store.userPresets.length, 1);
+  assert.equal(store.userPresets[0].name, 'Good Name');
+  assert.equal(store.userPresets[0].patch.basePitch, 1200);
+  assert.ok(store.userPresets[0].id.startsWith('user-'));
+  assert.equal(store.builtInOverrides, undefined);
+  assert.equal(store.deletedBuiltIns, undefined);
+
+  const presets = resolvePresets(store);
+  assert.equal(presets.length, PRESETS.length + 1);
+  assert.equal(findPreset('8bit-hero', presets).name, '8-Bit Hero');
+  assert.ok(findPreset('dark-wizard', presets), 'legacy deletion is ignored');
+});
+
+test('sanitizePresetStore caps the number of user presets', () => {
+  const users = Array.from({ length: MAX_USER_PRESETS + 5 }, (_, index) => ({
+    id: `user-cap-${index}`,
+    name: `Preset ${index}`,
+    mode: 'chiptune',
+    patch: { ...DEFAULT_CONFIG },
+  }));
+  const store = sanitizePresetStore({ userPresets: users });
+  assert.equal(store.userPresets.length, MAX_USER_PRESETS);
+});
+
+test('sanitizePresetName trims, collapses and caps names', () => {
+  assert.equal(sanitizePresetName('  My   Hero  '), 'My Hero');
+  assert.equal(
+    sanitizePresetName('x'.repeat(MAX_PRESET_NAME_LENGTH + 10)).length,
+    MAX_PRESET_NAME_LENGTH,
+  );
+  assert.equal(sanitizePresetName(42), '');
+  assert.equal(sanitizePresetName('   '), '');
+});
+
+test('preset store round-trips through storage', () => {
+  const storage = memoryStorage();
+  let store = emptyPresetStore();
+  store = addUserPreset(store, {
+    id: 'user-round-trip',
+    name: 'Round Trip',
+    config: { ...DEFAULT_CONFIG, mode: 'animalese', basePitch: 520 },
+  });
+  store = addUserPreset(store, {
+    id: 'user-round-trip-2',
+    name: 'Round Trip Two',
+    config: { ...DEFAULT_CONFIG, mode: 'robotic', basePitch: 200 },
+  });
+
+  assert.equal(persistPresetStore(store, storage), true);
+  assert.ok(storage.getItem(PRESET_STORE_KEY));
+  assert.deepEqual(loadPresetStore(storage), store);
+});
+
+test('loadPresetStore ignores legacy built-in override and deletion keys', () => {
+  const storage = memoryStorage({
+    [PRESET_STORE_KEY]: JSON.stringify({
+      userPresets: [],
+      builtInOverrides: {
+        '8bit-hero': { name: 'Hacked', mode: 'chiptune', patch: { ...DEFAULT_CONFIG } },
+      },
+      deletedBuiltIns: ['dark-wizard'],
+    }),
+  });
+  const store = loadPresetStore(storage);
+  assert.deepEqual(store, emptyPresetStore());
+
+  const presets = resolvePresets(store);
+  assert.equal(presets.length, PRESETS.length);
+  assert.equal(findPreset('8bit-hero', presets).name, '8-Bit Hero');
+  assert.ok(findPreset('dark-wizard', presets), 'legacy deletion is ignored');
+});
+
+test('loadPresetStore tolerates missing, corrupt and throwing storage', () => {
+  assert.deepEqual(loadPresetStore(null), emptyPresetStore());
+  assert.deepEqual(
+    loadPresetStore(memoryStorage({ [PRESET_STORE_KEY]: '{not json' })),
+    emptyPresetStore(),
+  );
+  assert.deepEqual(loadPresetStore(throwingStorage()), emptyPresetStore());
+  assert.equal(persistPresetStore(emptyPresetStore(), null), false);
+  assert.equal(persistPresetStore(emptyPresetStore(), throwingStorage()), false);
+});
+
+test('configFromPreset round-trips user and stock built-in presets', () => {
+  const builtIn = findPreset('cozy-animal', resolvePresets(emptyPresetStore()));
+  const builtInConfig = configFromPreset(builtIn);
+  assert.equal(builtInConfig.mode, 'animalese');
+  assert.equal(builtInConfig.basePitch, 520);
+
+  const user = createUserPreset({
+    id: 'user-config-round-trip',
+    name: 'User Config',
+    config: { ...builtInConfig, basePitch: 600, waveform: 'sine' },
+  });
+  const userConfig = configFromPreset(user);
+  assert.equal(userConfig.mode, 'animalese');
+  assert.equal(userConfig.basePitch, 600);
+  assert.equal(userConfig.waveform, 'sine');
+});
+
+// ---------------------------------------------------------------------------
+section('Preset transfer');
+
+test('preset bundles export only user presets and omit internal ids', () => {
+  const user = createUserPreset({
+    id: 'user-bundle-one',
+    name: '  My   Hero ',
+    config: { ...DEFAULT_CONFIG, basePitch: 600, waveform: 'sine' },
+  });
+  const bundle = createPresetBundle([user], { exportedAt: '2026-10-31T00:00:00.000Z' });
+
+  assert.equal(bundle.app, 'bliptalk-studio');
+  assert.equal(bundle.kind, 'bliptalk-presets');
+  assert.equal(bundle.version, 1);
+  assert.equal(bundle.exportedAt, '2026-10-31T00:00:00.000Z');
+  assert.equal(bundle.presets.length, 1);
+  assert.equal(bundle.presets[0].name, 'My Hero');
+  assert.equal(bundle.presets[0].patch.basePitch, 600);
+  assert.equal('id' in bundle.presets[0], false);
+
+  const parsed = parsePresetBundle(serializePresetBundle(bundle));
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.presets.length, 1);
+  assert.equal(parsed.presets[0].name, 'My Hero');
+});
+
+test('parsePresetBundle accepts the canonical object and a bare array', () => {
+  const object = parsePresetBundle(JSON.stringify({
+    app: 'bliptalk-studio',
+    kind: 'bliptalk-presets',
+    version: 1,
+    presets: [{ name: 'One', mode: 'chiptune', patch: {} }],
+  }));
+  assert.equal(object.ok, true);
+  assert.equal(object.presets.length, 1);
+
+  const array = parsePresetBundle(JSON.stringify([
+    { name: 'Two', mode: 'animalese', patch: { basePitch: 520 } },
+  ]));
+  assert.equal(array.ok, true);
+  assert.equal(array.presets[0].name, 'Two');
+});
+
+test('parsePresetBundle rejects empty, malformed and future files', () => {
+  assert.equal(parsePresetBundle('').ok, false);
+  assert.equal(parsePresetBundle('{not json').ok, false);
+  assert.equal(parsePresetBundle(JSON.stringify({ app: 'other', presets: [] })).ok, false);
+  assert.equal(parsePresetBundle(JSON.stringify({ kind: 'other', presets: [] })).ok, false);
+  assert.equal(parsePresetBundle(JSON.stringify({ version: 2, presets: [] })).ok, false);
+  assert.equal(parsePresetBundle(JSON.stringify({ presets: 'nope' })).ok, false);
+  assert.equal(parsePresetBundle('x'.repeat(MAX_IMPORT_BYTES + 1)).ok, false);
+});
+
+test('mergePresetBundle adds valid entries and skips duplicates, stock names and junk', () => {
+  const result = mergePresetBundle(emptyPresetStore(), [
+    { name: 'Mine', mode: 'chiptune', patch: { basePitch: 500 } },
+    { name: 'mine', mode: 'chiptune', patch: { basePitch: 700 } },
+    { name: '8-Bit Hero', mode: 'chiptune', patch: {} },
+    { name: '', mode: 'chiptune', patch: {} },
+    { name: 'Second', mode: 'animalese', patch: { basePitch: 520 } },
+    'nope',
+  ]);
+
+  assert.equal(result.imported, 2);
+  assert.equal(result.skippedDuplicate, 2);
+  assert.equal(result.skippedInvalid, 2);
+  assert.equal(result.limitReached, false);
+  assert.deepEqual(result.store.userPresets.map((preset) => preset.name), ['Mine', 'Second']);
+  assert.equal(result.store.userPresets[0].patch.basePitch, 500);
+  assert.equal(result.store.userPresets[1].mode, 'animalese');
+});
+
+test('mergePresetBundle respects the 40-preset cap', () => {
+  let store = emptyPresetStore();
+  for (let i = 0; i < MAX_USER_PRESETS; i += 1) {
+    store = addUserPreset(store, { name: `Preset ${i}`, config: DEFAULT_CONFIG });
+  }
+
+  const result = mergePresetBundle(store, [
+    { name: 'Overflow', mode: 'chiptune', patch: {} },
+  ]);
+  assert.equal(result.imported, 0);
+  assert.equal(result.limitReached, true);
+  assert.equal(result.store.userPresets.length, MAX_USER_PRESETS);
+});
+
+test('presetBundleFilename is date-stamped and deterministic', () => {
+  assert.equal(
+    presetBundleFilename(new Date('2026-10-31T12:00:00Z')),
+    'bliptalk-presets-2026-10-31.json',
+  );
+});
+
+// ---------------------------------------------------------------------------
+section('Workspace restore');
+
+test('default workspace points at the default preset', () => {
+  const state = defaultWorkspaceState();
+  assert.equal(state.presetId, '8bit-hero');
+  assert.equal(state.customized, false);
+  assert.equal(state.config.mode, 'chiptune');
+  assert.ok(state.text.length > 0);
+});
+
+test('workspace round-trips text and voice state through separate stores', () => {
+  const local = memoryStorage();
+  const session = memoryStorage();
+  const config = presetConfig('8bit-hero');
+  const result = persistWorkspace(
+    { text: 'Hello there?', config, presetId: '8bit-hero', customized: false },
+    local,
+    session,
+  );
+
+  assert.deepEqual(result, { configStored: true, textStored: true });
+  assert.ok(local.getItem(WORKSPACE_STORE_KEY));
+  assert.ok(session.getItem(DRAFT_STORE_KEY));
+
+  const hydrated = hydrateWorkspace(loadWorkspace(local, session), PRESETS);
+  assert.equal(hydrated.text, 'Hello there?');
+  assert.equal(hydrated.presetId, '8bit-hero');
+  assert.equal(hydrated.customized, false);
+  assert.equal(hydrated.restoredText, true);
+  assert.equal(hydrated.restoredConfig, false);
+  assert.ok(configsEqual(hydrated.config, config));
+});
+
+test('a modified patch is restored as a custom patch', () => {
+  const local = memoryStorage();
+  const session = memoryStorage();
+  const config = { ...presetConfig('8bit-hero'), basePitch: 500 };
+
+  persistWorkspace({ text: 'Custom line', config, presetId: '8bit-hero', customized: true }, local, session);
+  const hydrated = hydrateWorkspace(loadWorkspace(local, session), PRESETS);
+
+  assert.equal(hydrated.customized, true);
+  assert.equal(hydrated.restoredConfig, true);
+  assert.equal(hydrated.config.basePitch, 500);
+});
+
+test('a stale preset id becomes a custom patch', () => {
+  const hydrated = hydrateWorkspace(
+    {
+      configState: {
+        config: presetConfig('8bit-hero'),
+        presetId: 'user-missing',
+        customized: false,
+      },
+      draft: null,
+    },
+    PRESETS,
+  );
+
+  assert.equal(hydrated.presetId, null);
+  assert.equal(hydrated.customized, true);
+  assert.equal(hydrated.restoredConfig, false);
+});
+
+test('workspace load tolerates missing, corrupt and future-version data', () => {
+  assert.equal(loadWorkspace(memoryStorage(), memoryStorage()), null);
+  assert.equal(
+    loadWorkspace(memoryStorage({ [WORKSPACE_STORE_KEY]: '{bad' }), memoryStorage()),
+    null,
+  );
+  assert.equal(
+    loadWorkspace(
+      memoryStorage({
+        [WORKSPACE_STORE_KEY]: JSON.stringify({ version: 2, config: DEFAULT_CONFIG }),
+      }),
+      memoryStorage(),
+    ),
+    null,
+  );
+  assert.equal(loadWorkspace(null, null), null);
+});
+
+test('workspace caps long text and keeps an intentionally empty draft', () => {
+  const local = memoryStorage();
+  const session = memoryStorage();
+  const longText = 'a'.repeat(MAX_TEXT_LENGTH + 25);
+
+  persistWorkspace({ text: longText, config: presetConfig('8bit-hero'), presetId: '8bit-hero', customized: false }, local, session);
+  assert.equal(hydrateWorkspace(loadWorkspace(local, session), PRESETS).text.length, MAX_TEXT_LENGTH);
+
+  const local2 = memoryStorage();
+  const session2 = memoryStorage();
+  persistWorkspace({ text: '', config: presetConfig('8bit-hero'), presetId: '8bit-hero', customized: false }, local2, session2);
+  assert.equal(hydrateWorkspace(loadWorkspace(local2, session2), PRESETS).text, '');
+});
+
+test('workspace persistence degrades to defaults when storage throws', () => {
+  assert.deepEqual(
+    persistWorkspace(
+      { text: 'x', config: DEFAULT_CONFIG, presetId: null, customized: true },
+      throwingStorage(),
+      throwingStorage(),
+    ),
+    { configStored: false, textStored: false },
+  );
+  assert.equal(loadWorkspace(throwingStorage(), throwingStorage()), null);
+});
+
+// ---------------------------------------------------------------------------
+section('ZIP writer');
+
+test('crc32 matches the standard test vector', () => {
+  assert.equal(crc32(new TextEncoder().encode('123456789')), 0xcbf43926);
+  assert.equal(crc32(new Uint8Array(0)), 0);
+});
+
+test('createZipBytes writes a readable store-only archive', () => {
+  const encoder = new TextEncoder();
+  const bytes = createZipBytes(
+    [
+      { name: 'a.txt', data: encoder.encode('hello') },
+      { name: 'b.bin', data: new Uint8Array([0, 1, 2, 255]) },
+    ],
+    { date: new Date(2026, 0, 2, 3, 4, 6) },
+  );
+
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  assert.equal(view.getUint32(0, true), 0x04034b50, 'local header');
+  assert.equal(view.getUint32(bytes.length - 22, true), 0x06054b50, 'end record');
+
+  const entries = zipEntries(bytes);
+  assert.deepEqual(entries.map((entry) => entry.name), ['a.txt', 'b.bin']);
+  assert.ok(entries.every((entry) => entry.method === 0), 'stored, not deflated');
+  assert.equal(new TextDecoder().decode(entries[0].data), 'hello');
+  assert.deepEqual([...entries[1].data], [0, 1, 2, 255]);
+  assert.equal(entries[0].crc, crc32(encoder.encode('hello')));
+});
+
+test('createZipBytes handles empty entries and rejects bad input', () => {
+  const bytes = createZipBytes([{ name: 'empty.wav', data: new Uint8Array(0) }], {
+    date: new Date(2026, 0, 2, 3, 4, 6),
+  });
+  const entries = zipEntries(bytes);
+  assert.equal(entries[0].name, 'empty.wav');
+  assert.equal(entries[0].data.length, 0);
+  assert.equal(entries[0].crc, 0);
+
+  assert.throws(() => createZipBytes([]));
+  assert.throws(() => createZipBytes([{ name: '', data: new Uint8Array(0) }]));
+  assert.throws(() =>
+    createZipBytes([
+      { name: 'same.wav', data: new Uint8Array(0) },
+      { name: 'same.wav', data: new Uint8Array(1) },
+    ]),
+  );
+});
+
+test('createZipBytes is deterministic for a fixed date', () => {
+  const files = [{ name: 'one.wav', data: new Uint8Array([1, 2, 3]) }];
+  const date = new Date(2026, 0, 2, 3, 4, 6);
+  assert.deepEqual([...createZipBytes(files, { date })], [...createZipBytes(files, { date })]);
+});
+
+// ---------------------------------------------------------------------------
+section('Version');
+
+test('APP_VERSION matches package.json', () => {
+  assert.equal(APP_VERSION, PACKAGE_VERSION);
 });
 
 // ---------------------------------------------------------------------------

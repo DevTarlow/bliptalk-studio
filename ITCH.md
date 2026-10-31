@@ -45,16 +45,19 @@ itch relabels things occasionally, so match on meaning rather than exact wording
 | **Pricing** | `$0 or donate` |
 | **Uploads** | `bliptalk-studio-itch.zip` |
 | **"This file will be played in the browser"** | ✅ checked |
-| **Embed viewport** | width `900`, height `840` |
+| **Embed viewport** | width `900`, height `900` |
 | **Fullscreen button** | ✅ checked |
 | **Mobile friendly** | ✅ checked (layout is responsive; it scrolls on phones) |
 | **Genre** | leave blank (only applies to Games) |
 | **Content warnings / maturity** | none |
 | **Comments** | your call; on is friendlier for a tool |
 
-**Why 840 high:** the app's content measures exactly 834 px tall at 900 px wide,
-so 840 gives a clean fit with no scrollbar. If you change the viewport later,
-check for a scrollbar inside the embed.
+**Why 900 high:** the 1.1.0 layout measures about 885 px tall at 900 px wide,
+so 900 gives a clean fit with no scrollbar. Earlier builds fit in 840; the
+preset/backup controls and the extra status line need the new height. Saved
+presets wrap in the Presets bar, so a browser with several user presets can
+grow taller; the embed will scroll in that case. If you change the viewport
+later, check for a scrollbar inside the embed.
 
 ### Tags
 
@@ -70,13 +73,18 @@ tool, audio, sound, chiptune, 8-bit, retro, generator, voice, game-development, 
 
 Paste this into the description box. The lines in capitals are section titles,
 so select them and apply itch's heading style if you want them to stand out.
+Keep the live page's bold on the three voice names and the PRESETS label, and
+its italic on the preset list and the AI note. This is the live copy plus the
+1.1.0 insertions; the existing sentences are kept as they were so the indexed
+page does not churn.
 
 ```
-Turn typed text into retro dialogue sounds, right in your browser.
+Turn typed text into retro dialogue sounds, right in your browser. BlipTalk
+Studio is a free tool for game makers who need a voice for their characters
+without recording one.
 
-BlipTalk Studio is a free tool for game makers who need a voice for their
-characters without recording one. Type a line, pick a voice, press play, and
-save the result as a WAV file for your game.
+Type a line, pick a voice, press play, and save the result as a WAV file for
+your game.
 
 It runs in your browser. Nothing to install, and the text you type is never
 uploaded anywhere.
@@ -106,6 +114,10 @@ HOW TO USE IT
 WHAT YOU CAN CHANGE
 
 Base pitch, speed, pitch variation, volume, note length, tone and waveform.
+
+Every slider also has a number box, so you can type an exact value instead of
+dragging it.
+
 Leave punctuation intonation on and questions rise, exclamations lift, and full
 stops fall, each with a natural pause.
 
@@ -113,6 +125,10 @@ PRESETS
 
 Cozy Animal, Sarcastic Robot, 8-Bit Hero, Dark Wizard and Fairy Whispers. Load
 one, then adjust from there.
+
+Tweak one and use Save current to keep your own copy. The built-ins stay fixed,
+and your presets stay in this browser. You can update or delete them. You can
+export your presets to a file and import them on another browser.
 
 WHAT YOU GET
 
@@ -123,12 +139,26 @@ Export Blip Pack saves five single-character blips you can trigger one at a
 time as text types out. The pitched voices give you a five-note scale, and
 Animalese gives you the five vowel sounds.
 
+There is a ZIP option too, so you can download all five blips as one file.
+
 GOOD TO KNOW
 
 - Free, no account, works on desktop and mobile browsers.
 - Your text never leaves your computer. Everything is generated in the browser.
+- Your last line is kept for this tab, so a refresh won't lose it. Your voice
+  settings stay in this browser.
 - The sounds you make are yours, including in commercial games. No credit needed.
-- Made with the Web Audio API. No samples, no plugins, no server.
+- Made with the Web Audio API.
+
+Made by DevTarlow with ❤️
+
+- Built with React, Vite, Tailwind CSS and the Web Audio API.
+- All sound is synthesised at runtime. No samples were used.
+
+* The application code was written with AI assistance. All audio is generated at
+runtime by classic DSP synthesis (oscillators, formant filters, noise shaping).
+No AI models are used to produce sound or to process anything you type, and no
+AI-generated art, music or text is included.
 ```
 
 ### Short description
@@ -254,19 +284,22 @@ hard to read in paragraphs.
 
 ## 7. After publishing
 
-Three things to check on the live page, in order:
+Four things to check on the live page, in order:
 
 1. **Do the export buttons work inside the itch embed?** This is the one real
    risk. itch serves HTML projects inside a sandboxed iframe, and the sandbox
    has to permit downloads for the WAV buttons to fire. Click *Play* first to
-   unlock audio, then try **Export WAV File** and **Export Blip Pack**.
-   If downloads are blocked, use the **Fullscreen** button on the page and test
-   again there. If they are blocked in both, add a line to the description
-   pointing people at the fullscreen view, or host the app standalone and link
-   to it.
-2. **No scrollbar in the embed.** If one appears, raise the viewport height by
-   20 px.
-3. **Audio unlocks on the first click.** The badge in the top right should
+   unlock audio, then try **Export WAV File**, **Export Blip Pack**, and the
+   **ZIP** button. If downloads are blocked, use the **Fullscreen** button on
+   the page and test again there. If they are blocked in both, add a line to the
+   description pointing people at the fullscreen view, or host the app
+   standalone and link to it.
+2. **The embed height is 900.** The 1.1.0 layout uses about 885 px; the old 840
+   viewport will show a scrollbar. Raise it to 900 in the project settings.
+3. **No scrollbar in the embed.** If one appears with a fresh browser profile,
+   raise the viewport height by another 20 px. Saved presets wrap the Presets
+   bar and can add height in a returning browser.
+4. **Audio unlocks on the first click.** The badge in the top right should
    change from *Click to enable audio* to *Audio ready*.
 
 Published at <https://tarlow.itch.io/bliptalk-studio>. The README links to it.
@@ -396,3 +429,53 @@ standard card size, so it will not be cropped by X, Facebook, LinkedIn or
 Discord. Posts with an image get considerably more reach than text alone, and
 the card already carries the name, the three voices and the export line, so
 the post text does not have to repeat all of it.
+
+---
+
+## 10. v1.1.0 devlog
+
+Post this after the 1.1.0 build is uploaded. Title field:
+
+```
+BlipTalk Studio 1.1 - Save Your Presets, Keep Your Line
+```
+
+Body:
+
+```
+I put BlipTalk Studio on itch.io last month. The first version did the main job: type a line, pick a voice, export a WAV.
+
+This update is about the work around that job.
+
+What does that mean in practice?
+
+It means exact values, presets you can keep, and a line that survives a refresh.
+
+## Type the number you want
+
+Every slider now has a number box. Why drag at all? Type 620 instead of dragging until the readout lands on it, and the value snaps to the slider step and clamps to the range, so a stray digit does not break the voice.
+
+## Keep your own presets
+
+The five built-ins stay fixed. Tweak one, hit Save current, and it becomes yours. You can update it, rename it, or delete it. You can keep up to 40.
+
+## Take them with you
+
+Presets used to live and die in one browser, which meant a cleared cache, a new laptop, or a different browser wiped out every voice you had tuned. Now you can export them to a JSON file and import them on another machine. What if you move to another browser? Import adds to what is already there and skips names you have used, so nothing is overwritten, and if you move from a laptop to a desktop, or clear site data by accident, the file is there.
+
+## One file instead of five
+
+Export Blip Pack still gives you the five WAVs. There is also a ZIP button that puts the same five files in one download. If your browser asks permission for every one of those WAVs, the ZIP is the easier path, and the five-file export stays there for anyone who wants each blip as its own file.
+
+## Pick up where you left off
+
+Your voice settings are remembered in the browser. Your last line is kept for the tab, so a refresh does not lose it. The line is session-only on purpose, so closing the tab clears it, but an accidental reload keeps it exactly where you left it.
+
+## A few fixes
+
+The Play button now restarts the line while it is playing. Space still stops and plays. Space no longer hijacks a focused button. The script panel now shows the estimated line length next to the character count, so you can see whether a line will fit before you export it. But the main change is simple: the button now does what its label says.
+
+Give it a go, and keep building.
+```
+
+Attach the cover or one of the existing screenshots. No new asset is required.

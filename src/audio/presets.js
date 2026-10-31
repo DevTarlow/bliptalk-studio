@@ -4,7 +4,7 @@
  * Pure data, no React: the engine, the UI and the tests all read from here.
  */
 
-import { DEFAULT_CONFIG } from './intonation.js';
+import { DEFAULT_CONFIG, normalizeConfig } from './intonation.js';
 
 export const MODES = [
   {
@@ -121,10 +121,23 @@ export const MODE_DEFAULT_PRESET = {
 export const DEFAULT_TEXT =
   'Welcome to my shop, adventurer! What can I get for you today?';
 
+/** Look a preset up in any collection (built-ins, effective list, user list). */
+export function findPreset(id, presets = PRESETS) {
+  if (!id) return null;
+  return presets.find((preset) => preset.id === id) ?? null;
+}
+
+/** Full, normalized config for a preset object. */
+export function configFromPreset(preset) {
+  return normalizeConfig({
+    ...DEFAULT_CONFIG,
+    ...(preset ? { mode: preset.mode, ...preset.patch } : {}),
+  });
+}
+
 /** Full config for a preset id, falling back to the defaults. */
-export function presetConfig(id) {
-  const preset = PRESETS.find((p) => p.id === id);
-  return { ...DEFAULT_CONFIG, ...(preset ? { mode: preset.mode, ...preset.patch } : {}) };
+export function presetConfig(id, presets = PRESETS) {
+  return configFromPreset(findPreset(id, presets));
 }
 
 /**

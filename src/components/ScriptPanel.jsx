@@ -2,7 +2,7 @@
 
 import { Eraser } from 'lucide-react';
 
-export default function ScriptPanel({ text, onChange, onClear, maxLength }) {
+export default function ScriptPanel({ text, onChange, onClear, maxLength, estimatedDuration = 0 }) {
   const count = Array.from(text).length;
   const atLimit = count >= maxLength;
 
@@ -11,6 +11,15 @@ export default function ScriptPanel({ text, onChange, onClear, maxLength }) {
       <div className="flex items-center justify-between gap-2 border-b-2 border-slate-800 px-3 py-1.5">
         <span className="panel-label text-cyan-500">Your Script</span>
         <div className="flex items-center gap-2">
+          {estimatedDuration > 0 ? (
+            <span
+              className="text-[9px] tabular-nums text-slate-600"
+              title="Estimated playback length at the current speed"
+              aria-label={`Estimated playback length ${estimatedDuration.toFixed(1)} seconds`}
+            >
+              ≈ {estimatedDuration.toFixed(1)}s
+            </span>
+          ) : null}
           <span
             className={`text-[9px] tabular-nums ${atLimit ? 'text-amber-400' : 'text-slate-600'}`}
           >
